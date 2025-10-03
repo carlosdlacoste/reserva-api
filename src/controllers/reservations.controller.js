@@ -1,4 +1,5 @@
 const model = require('../models/reservations.model');
+const spacesModel = require('../models/spaces.model');
 
 function create(req, res) {
     const { userId, spaceId, date, startHour, duration } = req.body;
@@ -6,15 +7,33 @@ function create(req, res) {
         return res.status(400).json({ error: 'Missing or invalid fields' });
     }
 
+    const space = spacesModel.getSpaceById(spaceId);
+    if (!space) {
+        return res.status(404).json({ error: 'Space not found' });
+    }
+
+    const totalUSD = space.basePrice * duration;
+
+    // Simular tipo de cambio (ej. 35 VES/USD)
+    const exchangeRate = 35;
+    const totalVES = totalUSD * exchangeRate;
+
+    // Simular cuotas (3 pagos semanales)
+    const installments = [
+        { dueDate: '2025-10-10', amount: totalVES / 3 },
+        { dueDate: '2025-10-17', amount: totalVES / 3 },
+        { dueDate: '2025-10-24', amount: totalVES / 3 },
+    ];
+
     const reservation = model.createReservation({
         userId,
         spaceId,
         date,
         startHour,
         duration,
-        totalVES: 0, // to be calculated later
-        totalUSD: 0,
-        installments: [],
+        totalVES, // to be calculated later
+        totalUSD,
+        installments,
     });
 
     res.status(201).json(reservation);
