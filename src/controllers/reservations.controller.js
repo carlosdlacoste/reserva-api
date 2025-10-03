@@ -2,7 +2,9 @@ const model = require('../models/reservations.model');
 const spacesModel = require('../models/spaces.model');
 
 function create(req, res) {
-    const { userId, spaceId, date, startHour, duration } = req.body;
+    const { spaceId, date, startHour, duration } = req.body;
+    const userId = req.userId;
+
     if (!userId || !spaceId || !date || typeof startHour !== 'number' || typeof duration !== 'number') {
         return res.status(400).json({ error: 'Missing or invalid fields' });
     }
