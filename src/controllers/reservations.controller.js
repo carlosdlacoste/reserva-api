@@ -25,6 +25,26 @@ function create(req, res) {
         { dueDate: '2025-10-24', amount: totalVES / 3 },
     ];
 
+    const existingReservations = model.getAllReservations().filter(r =>
+        r.spaceId === spaceId && r.date === date
+    );
+
+    const requestedStart = parseInt(startHour);
+    const requestedEnd = requestedStart + parseInt(duration);
+
+    const isOverlapping = existingReservations.some(r => {
+    const existingStart = parseInt(r.startHour);
+    const existingEnd = existingStart + parseInt(r.duration);
+    return (
+        (requestedStart < existingEnd) &&
+        (requestedEnd > existingStart)
+    );
+    });
+
+    if (isOverlapping) {
+    return res.status(409).json({ error: 'Time slot not available' });
+    }
+
     const reservation = model.createReservation({
         userId,
         spaceId,
