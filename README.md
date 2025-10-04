@@ -1,4 +1,4 @@
-# API de Reservas de Espacios
+# API Sistema de Reservas con Simulacion de Cuotas
 
 Este proyecto es una API RESTful para gestionar reservas de espacios físicos (salas, oficinas, etc.), con autenticación JWT, validación de disponibilidad y lógica modular.
 
