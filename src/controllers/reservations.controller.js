@@ -1,7 +1,7 @@
 const model = require('../models/reservations.model');
 const spacesModel = require('../models/spaces.model');
 
-function create(req, res) {
+async function create(req, res) {
     const { spaceId, date, startHour, duration } = req.body;
     const userId = req.userId;
 
@@ -16,15 +16,27 @@ function create(req, res) {
 
     const totalUSD = space.basePrice * duration;
 
-    // Simular tipo de cambio (ej. 35 VES/USD)
-    const exchangeRate = 35;
-    const totalVES = totalUSD * exchangeRate;
+    // Obtener tipo de cambio desde API externa
+    let exchangeRate;
+    try {
+        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await response.json();
+        exchangeRate = data.rates.VES;
+
+        if (!exchangeRate) {
+        return res.status(500).json({ error: 'VES rate not available from exchange API' });
+        }
+    } catch (error) {
+        return res.status(500).json({ error: 'Failed to fetch exchange rate' });
+    }
+
+    const totalVES = Math.round(totalUSD * exchangeRate);
 
     // Simular cuotas (3 pagos semanales)
     const installments = [
-        { dueDate: '2025-10-10', amount: totalVES / 3 },
-        { dueDate: '2025-10-17', amount: totalVES / 3 },
-        { dueDate: '2025-10-24', amount: totalVES / 3 },
+        { dueDate: '2025-10-10', amount: Math.round(totalVES / 3) },
+        { dueDate: '2025-10-17', amount: Math.round(totalVES / 3) },
+        { dueDate: '2025-10-24', amount: Math.round(totalVES / 3) },
     ];
 
     const existingReservations = model.getAllReservations().filter(r =>
@@ -35,16 +47,16 @@ function create(req, res) {
     const requestedEnd = requestedStart + parseInt(duration);
 
     const isOverlapping = existingReservations.some(r => {
-    const existingStart = parseInt(r.startHour);
-    const existingEnd = existingStart + parseInt(r.duration);
-    return (
-        (requestedStart < existingEnd) &&
-        (requestedEnd > existingStart)
-    );
+        const existingStart = parseInt(r.startHour);
+        const existingEnd = existingStart + parseInt(r.duration);
+        return (
+        requestedStart < existingEnd &&
+        requestedEnd > existingStart
+        );
     });
 
     if (isOverlapping) {
-    return res.status(409).json({ error: 'Time slot not available' });
+        return res.status(409).json({ error: 'Time slot not available' });
     }
 
     const reservation = model.createReservation({
@@ -53,13 +65,15 @@ function create(req, res) {
         date,
         startHour,
         duration,
-        totalVES, // to be calculated later
         totalUSD,
+        totalVES,
+        exchangeRate,
         installments,
     });
 
     res.status(201).json(reservation);
 }
+
 
 function list(req, res) {
     res.json(model.getAllReservations());
